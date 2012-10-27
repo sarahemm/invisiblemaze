@@ -1,22 +1,22 @@
 # NetReader reads from a UDP socket and makes callbacks to the driver for various events
 class NetReader
-  attr_writer :beam_callback, :maze_callback, :event_callback, :loc_callback
+  attr_writer :beam_callback, :maze_callback, :event_callback, :loc_callback, :state_callback
   
   def initialize
     @udp = UDPSocket.new
-    @udp.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
+    @udp.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEPORT, true)
     @udp.bind("127.0.0.1", 4444)
     @beam_callback  = lambda { }
     @maze_callback  = lambda { }
     @event_callback = lambda { }
     @loc_callback   = lambda { }
+    @state_callback = lambda { }
   end
   
   def get_data
     begin
       until !(data = @udp.recvfrom_nonblock(255)[0]) do
         process_received_data data
-        puts "nom nom nom data"
       end
     rescue Errno::EAGAIN
       # no data to process!
@@ -62,6 +62,8 @@ class NetReader
         @maze_callback[hbeams, vbeams]
       when 'playerloc'
         @loc_callback[data.shift.to_i, data.shift.to_i]
+      when 'state'
+        @state_callback[data.shift.to_sym, data.shift.to_sym]
     end
   end
 end

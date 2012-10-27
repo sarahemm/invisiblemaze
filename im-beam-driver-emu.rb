@@ -1,7 +1,6 @@
 #!/usr/bin/ruby
 
 require 'socket'
-require 'maze.rb'
 
 class BeamDriver
   def initialize

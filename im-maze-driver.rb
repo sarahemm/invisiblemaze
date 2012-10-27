@@ -1,7 +1,8 @@
 #!/usr/bin/ruby
 
 require 'socket'
-require 'maze.rb'
+require 'lib/im-maze.rb'
+require 'lib/im-netreader.rb'
 
 class MazeDriver
   def initialize
@@ -21,7 +22,7 @@ class MazeDriver
     @player_loc[0] = [start_x, start_y]
     @player_loc[1] = nil
     broadcast_player_loc
-    self.state = :in_game
+    self.state = :ingame
   end
   
   def broadcast_maze
@@ -57,7 +58,7 @@ class MazeDriver
     case @state
       when :attract
         self.new_game x, y
-      when :in_game
+      when :ingame
         wall = @maze.horizontal_walls[y][x] if hv == :h
         wall = @maze.vertical_walls[y][x] if hv == :v
         case wall
@@ -93,6 +94,7 @@ class MazeDriver
   
   def state=(new_state)
     send_event "state changed from #{@state} to #{new_state}"
+    send_update "state #{@state} #{new_state}"
     @state = new_state
   end
   
@@ -102,40 +104,6 @@ class MazeDriver
   
   def send_event(msg)
     @udp.send "event maze-driver \"#{msg}\"", 0, @udp_addr, @udp_port
-  end
-end
-
-# NetReader reads from a UDP socket and makes callbacks to the maze driver for various events
-class NetReader
-  attr_writer :beam_callback
-  
-  def initialize
-    @udp = UDPSocket.new
-    @udp.bind("127.0.0.1", 4446)
-    @beam_callback  = lambda { }
-  end
-
-  def get_data
-    begin
-      until !(data = @udp.recvfrom_nonblock(255)[0]) do
-        process_received_data data
-      end
-    rescue Errno::EAGAIN
-      # no data to process!
-      return nil
-    end
-  end
-  
-  private
-  
-  def process_received_data(data_in)
-    data = data_in.scan(/"[^"]*"|\S+/)
-    case data.shift
-      when 'beam'
-        make = data.shift == 'm' ? true : false
-        hv = data.shift == 'h' ? :h : :v
-        @beam_callback[make, hv, data.shift.to_i, data.shift.to_i]
-    end
   end
 end
 

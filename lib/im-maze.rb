@@ -1,5 +1,3 @@
-#!/opt/local/bin/ruby1.9
-
 class Maze
   DIRECTIONS = [ [1, 0], [-1, 0], [0, 1], [0, -1] ]
   attr_accessor :vertical_walls, :horizontal_walls, :width, :height

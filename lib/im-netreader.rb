@@ -1,15 +1,17 @@
 # NetReader reads from a UDP socket and makes callbacks to the driver for various events
 class NetReader
-  attr_writer :beam_callback, :maze_callback, :event_callback, :loc_callback, :state_callback
+  attr_writer :beam_callback, :maze_callback, :event_callback, :loc_callback, :sound_callback, :state_callback
   
-  def initialize
+  def initialize(options = Hash.new)
+    @port = options[:port] || 4444
     @udp = UDPSocket.new
     @udp.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEPORT, true)
-    @udp.bind("127.0.0.1", 4444)
+    @udp.bind("127.0.0.1", @port)
     @beam_callback  = lambda { }
     @maze_callback  = lambda { }
     @event_callback = lambda { }
     @loc_callback   = lambda { }
+    @sound_callback = lambda { }
     @state_callback = lambda { }
   end
   
@@ -28,6 +30,7 @@ class NetReader
   
   def process_received_data(data_in)
     data = data_in.scan(/"[^"]*"|\S+/)
+    puts "NetReader got '#{data_in}'"
     case data.shift
       when 'beam'
         make = data.shift == 'm' ? true : false
@@ -62,6 +65,8 @@ class NetReader
         @maze_callback[hbeams, vbeams]
       when 'playerloc'
         @loc_callback[data.shift.to_i, data.shift.to_i]
+      when 'sound'
+        @sound_callback[data.shift]
       when 'state'
         @state_callback[data.shift.to_sym, data.shift.to_sym]
     end

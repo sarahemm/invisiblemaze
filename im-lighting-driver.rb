@@ -229,7 +229,7 @@ class LightingDriver
 end
 
 light = LightingDriver.new
-net_reader = NetReader.new
+net_reader = NetReader.new :port => 4448
 net_reader.state_callback = lambda {|old_state, new_state|
   puts "state updating to #{new_state}"
   light.state = new_state

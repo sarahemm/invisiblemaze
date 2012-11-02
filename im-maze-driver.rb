@@ -57,7 +57,15 @@ class MazeDriver
   def beam_broken(hv, x, y)
     case @state
       when :attract
+        send_update "sound mazegenstart"
+        sleep 2.25
+        self.state = :mazegen
+        # TODO: figure out how to not hardcode the timing here, ideally
+        send_update "sound mazegen"
+        sleep 4.75
+        send_update "sound mazegendone"
         self.new_game x, y
+        self.state = :ingame
       when :ingame
         wall = @maze.horizontal_walls[y][x] if hv == :h
         wall = @maze.vertical_walls[y][x] if hv == :v
@@ -93,6 +101,7 @@ class MazeDriver
   private
   
   def state=(new_state)
+    puts "state changed from #{@state} to #{new_state}"
     send_event "state changed from #{@state} to #{new_state}"
     send_update "state #{@state} #{new_state}"
     @state = new_state
@@ -107,8 +116,8 @@ class MazeDriver
   end
 end
 
-maze = MazeDriver.new()
-net_reader = NetReader.new()
+maze = MazeDriver.new
+net_reader = NetReader.new :port => 4446
 net_reader.beam_callback = lambda {|make, hv, x, y|
   maze.beam_broken hv, x, y if !make
 }

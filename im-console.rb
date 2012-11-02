@@ -212,7 +212,7 @@ beam_ui = BeamDisplay.new   :screen => screen, :width => 500,  :height => 500, :
 event_ui = EventDisplay.new :screen => screen, :width => 1000, :height => 200, :base_x => 12,  :base_y => 500
 
 # set up the network reader and all the callbacks for things it can talk to
-net_reader = NetReader.new
+net_reader = NetReader.new :port => 4445
 net_reader.beam_callback = lambda { |make, hv, x, y|
   beam_ui.hbeams[x][y] = make if hv == :h
   beam_ui.vbeams[x][y] = make if hv == :v
@@ -237,3 +237,5 @@ while true do
   screen.update
   sleep CYCLE_DELAY
 end
+
+# TODO: reset the console when the state goes back to :attract

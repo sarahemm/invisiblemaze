@@ -46,7 +46,7 @@ trap "SIGINT", proc {
   exit
 }
 
-modules = ['packet-reflector', 'sound-driver', 'lighting-driver', 'maze-driver']
+modules = ['packet-reflector', 'sound-driver', 'lighting-driver', 'beam-driver', 'maze-driver']
 @running_mods = Hash.new
 modules.each do |mod|
 	log.info "Launching #{mod}..."

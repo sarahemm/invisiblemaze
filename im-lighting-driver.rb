@@ -4,6 +4,7 @@ require 'rubygems'
 require 'artnet/io'
 require 'socket'
 require 'lib/im-netreader.rb'
+require 'lib/im-log.rb'
 
 class RGBLight
   attr_accessor :uni, :subuni, :start_chan, :r, :g, :b, :h, :s, :v
@@ -132,7 +133,7 @@ end
 class LightingDriver
   attr_accessor :state, :nbr_walls, :vwalls, :hwalls
   
-  def initialize
+  def initialize(options)
     @nbr_walls = 4
     @vwalls = Array.new(@nbr_walls+1, Array.new(@nbr_walls, nil) )
     @hwalls = Array.new(@nbr_walls, Array.new(@nbr_walls+1, nil) )
@@ -190,6 +191,8 @@ class LightingDriver
     @hwalls[3][4].lights = gen_wall_lights 2, 1, 128*3+1..128*4-3
     # bring up a new artnet connection
     @artnet = ArtNet::IO.new :network => "10.0.0.0", :netmask => "255.0.0.0"
+    @log        = options[:logger]
+    @log.info "iM lighting driver initialized."
   end
   
   def update_all_universes
@@ -229,17 +232,17 @@ class LightingDriver
 end
 
 $0 = "iM: Lighting"
-light = LightingDriver.new
+log = Logging.new 'LIT'
+light = LightingDriver.new :logger => log
 net_reader = NetReader.new :port => 4448
 net_reader.state_callback = lambda {|old_state, new_state|
-  puts "state updating to #{new_state}"
   light.state = new_state
 }
 
 while(true) do
   net_reader.get_data
   light.update_all_universes
-  puts light.state
+  #puts light.state
   case light.state
     when :attract
       # currently the whole board just flashes random colours for attract mode

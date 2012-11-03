@@ -3,9 +3,11 @@
 require 'socket'
 require 'lib/im-maze.rb'
 require 'lib/im-netreader.rb'
+require 'lib/im-log.rb'
 
 class MazeDriver
-  def initialize
+  def initialize(options)
+    @log = options[:logger]
     @grid_size = 4
     @udp = UDPSocket.new
     @udp_addr = "127.0.0.1"
@@ -14,6 +16,7 @@ class MazeDriver
     self.state = :attract
     # [0] is "most likely", [1] is "possibly still in", stores a 2 element array of x, y
     @player_loc = Array.new(2)
+    @log.info "iM maze driver initialized"
   end
 
   def new_game(start_x, start_y)
@@ -82,7 +85,7 @@ class MazeDriver
             send_event "#{hv}wall #{x}.#{y} was unhit, is now hit"
           when :open, :start, :end
             send_event "#{hv}wall #{x}.#{y} is open, updating player location"
-            puts "Old location #{@player_loc[0].join " "}, broke #{hv}beam #{x}.#{y}"
+            @log.debug "Old location #{@player_loc[0].join " "}, broke #{hv}beam #{x}.#{y}"
             if hv == :h && y == @player_loc[0][1] + 1 then
               @player_loc[0][1] += 1
             elsif hv == :h && y == @player_loc[0][1] then
@@ -92,7 +95,7 @@ class MazeDriver
             elsif hv == :v && y == @player_loc[0][0] then
               @player_loc[0][0] -= 1
             end
-            puts "New location #{@player_loc[0].join " "}, broke #{hv}beam #{x}.#{y}"
+            @log.debug "New location #{@player_loc[0].join " "}, broke #{hv}beam #{x}.#{y}"
             broadcast_player_loc
         end
     end
@@ -101,7 +104,7 @@ class MazeDriver
   private
   
   def state=(new_state)
-    puts "state changed from #{@state} to #{new_state}"
+    @log.debug "state changed from #{@state} to #{new_state}"
     send_event "state changed from #{@state} to #{new_state}"
     send_update "state #{@state} #{new_state}"
     @state = new_state
@@ -117,7 +120,8 @@ class MazeDriver
 end
 
 $0 = "iM: Maze Logic"
-maze = MazeDriver.new
+log = Logging.new 'MAZ'
+maze = MazeDriver.new :logger => log
 net_reader = NetReader.new :port => 4446
 net_reader.beam_callback = lambda {|make, hv, x, y|
   maze.beam_broken hv, x, y if !make

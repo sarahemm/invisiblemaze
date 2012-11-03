@@ -30,7 +30,6 @@ class NetReader
   
   def process_received_data(data_in)
     data = data_in.scan(/"[^"]*"|\S+/)
-    puts "NetReader got '#{data_in}'"
     case data.shift
       when 'beam'
         make = data.shift == 'm' ? true : false

@@ -9,11 +9,15 @@ class Logging
     @logger.level = 2
   end
   
+  def warn(msg)
+    @logger.warn msg
+  end
+  
   def info(msg)
     @logger.info msg
   end
   
   def debug(msg)
     @logger.debug msg
-  end
+  end  
 end

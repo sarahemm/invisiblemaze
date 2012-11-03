@@ -233,6 +233,12 @@ end
 
 $0 = "iM: Lighting"
 log = Logging.new 'LIT'
+
+trap "SIGINT", proc {
+  log.info "SIGINT received, shutting down."
+  Kernel.exit 0
+}
+
 light = LightingDriver.new :logger => log
 net_reader = NetReader.new :port => 4448
 net_reader.state_callback = lambda {|old_state, new_state|

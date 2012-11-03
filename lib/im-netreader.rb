@@ -15,10 +15,16 @@ class NetReader
     @state_callback = lambda { }
   end
   
-  def get_data
+  def get_data(options = Hash.new)
     begin
-      until !(data = @udp.recvfrom_nonblock(255)[0]) do
-        process_received_data data
+      if(options[:blocking]) then
+        until !(data = @udp.recvfrom(255)[0]) do
+          process_received_data data
+        end
+      else
+        until !(data = @udp.recvfrom_nonblock(255)[0]) do
+          process_received_data data
+        end
       end
     rescue Errno::EAGAIN
       # no data to process!

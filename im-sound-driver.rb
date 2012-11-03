@@ -39,6 +39,12 @@ end
 
 $0 = "iM: Sound"
 log = Logging.new 'SND'
+
+trap "SIGINT", proc {
+  log.info "SIGINT received, shutting down."
+  Kernel.exit 0
+}
+
 snd = SoundDriver.new :logger => log
 net_reader = NetReader.new :port => 4447
 net_reader.sound_callback = lambda {|sound|
@@ -46,5 +52,5 @@ net_reader.sound_callback = lambda {|sound|
 }
 
 while(true) do
-  net_reader.get_data
+  net_reader.get_data :blocking => true
 end

@@ -121,6 +121,12 @@ end
 
 $0 = "iM: Maze Logic"
 log = Logging.new 'MAZ'
+
+trap "SIGINT", proc {
+  log.info "SIGINT received, shutting down."
+  Kernel.exit 0
+}
+
 maze = MazeDriver.new :logger => log
 net_reader = NetReader.new :port => 4446
 net_reader.beam_callback = lambda {|make, hv, x, y|

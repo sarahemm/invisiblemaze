@@ -9,6 +9,12 @@ require 'lib/im-log.rb'
 
 $0 = "iM: Packet Reflector"
 log = Logging.new 'PKT'
+
+trap "SIGINT", proc {
+  log.info "SIGINT received, shutting down."
+  Kernel.exit 0
+}
+
 log.info "iM packet reflector initialized."
 udp = UDPSocket.new
 udp.bind("127.0.0.1", 4444)

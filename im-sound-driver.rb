@@ -35,6 +35,7 @@ class SoundDriver
   end
 end
 
+$0 = "iM: Sound"
 snd = SoundDriver.new
 net_reader = NetReader.new :port => 4447
 net_reader.sound_callback = lambda {|sound|

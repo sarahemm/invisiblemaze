@@ -116,6 +116,7 @@ class MazeDriver
   end
 end
 
+$0 = "iM: Maze Logic"
 maze = MazeDriver.new
 net_reader = NetReader.new :port => 4446
 net_reader.beam_callback = lambda {|make, hv, x, y|

@@ -228,6 +228,7 @@ class LightingDriver
   end
 end
 
+$0 = "iM: Lighting"
 light = LightingDriver.new
 net_reader = NetReader.new :port => 4448
 net_reader.state_callback = lambda {|old_state, new_state|

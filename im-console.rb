@@ -10,6 +10,8 @@ include Rubygame::Events
 
 # Display is inherited by all other display modules, sets up all common elements
 class Display
+  attr_reader :base_x, :base_y, :width, :height
+  
   def initialize(options)
     options[:base_x] = 0 if !options[:base_x]
     options[:base_y] = 0 if !options[:base_y]
@@ -22,6 +24,9 @@ class Display
     @height = options[:height]
     @title_font = TTF.new "fonts/title.ttf", (@width+@height)/2/20
     @body_font  = TTF.new "fonts/body.ttf", (@width+@height)/2/30
+  end
+  
+  def click(x, y)
   end
   
   private
@@ -53,7 +58,7 @@ class GridDisplay < Display
   end
   
   def draw_horiz_beam(surface, x, y, colour = [255, 0, 0])
-    beam_ul = [@hub_spacing/2 + @hub_spacing*x, (@hub_spacing/2 + @hub_spacing*y) - @hub_dia/2, 0]
+    beam_ul, beam_lr = get_horiz_beam_rect x, y
     beam_lr = [@hub_spacing/2 + @hub_spacing*(x+1), (@hub_spacing/2 + @hub_spacing*y) + @hub_dia/2, 0]
     filled = true
     filled = colour.pop if colour.length == 4
@@ -65,8 +70,7 @@ class GridDisplay < Display
   end
 
   def draw_vert_beam(surface, x, y, colour = [255, 0, 0])
-    beam_ul = [(@hub_spacing/2 + @hub_spacing*x) - @hub_dia/2, @hub_spacing/2 + @hub_spacing*y, 0]
-    beam_lr = [(@hub_spacing/2 + @hub_spacing*x) + @hub_dia/2, @hub_spacing/2 + @hub_spacing*(y+1), 0]
+    beam_ul, beam_lr = get_vert_beam_rect x, y
     filled = true
     filled = colour.pop if colour.length == 4
     if filled then
@@ -74,6 +78,20 @@ class GridDisplay < Display
     else
       surface.draw_box(beam_ul, beam_lr, colour);
     end
+  end
+  
+  # given the x, y of a horizontal beam, returns the pixel upper-left/lower-right rectangle
+  def get_horiz_beam_rect(x, y)
+    beam_ul = [@hub_spacing/2 + @hub_spacing*x, (@hub_spacing/2 + @hub_spacing*y) - @hub_dia/2, 0]
+    beam_lr = [@hub_spacing/2 + @hub_spacing*(x+1), (@hub_spacing/2 + @hub_spacing*y) + @hub_dia/2, 0]
+    [beam_ul, beam_lr]
+  end
+
+  # given the x, y of a vertical beam, returns the pixel upper-left/lower-right rectangle
+  def get_vert_beam_rect(x, y)
+    beam_ul = [(@hub_spacing/2 + @hub_spacing*x) - @hub_dia/2, @hub_spacing/2 + @hub_spacing*y, 0]
+    beam_lr = [(@hub_spacing/2 + @hub_spacing*x) + @hub_dia/2, @hub_spacing/2 + @hub_spacing*(y+1), 0]
+    [beam_ul, beam_lr]
   end
   
   def draw_hub(surface, x, y, colour = [255, 255, 255])
@@ -87,6 +105,9 @@ class BeamDisplay < GridDisplay
   
   def initialize options
     super
+    @udp = UDPSocket.new
+    @udp_addr = "127.0.0.1"
+    @udp_port = 4444
     @vbeams  = Array.new(@nbr_beams+1) { Array.new(@nbr_beams+1, false) }
     @hbeams = Array.new(@nbr_beams+1) { Array.new(@nbr_beams+1, false) }
   end
@@ -112,6 +133,45 @@ class BeamDisplay < GridDisplay
     text_surface.blit surface, [@hub_spacing/2+(@hub_spacing*@nbr_beams)/2-text_surface.width/2, 0]
     # blit the surface into the requested place on the screen
     surface.blit @screen, [@base_x, @base_y], [0, 0, @width, @height]
+  end
+  
+  # clicking a beam causes a simulated break/make cycle
+  def click(x, y)
+    super x, y
+    for beam_x in (0..@nbr_beams) do
+      for beam_y in (0..@nbr_beams-1) do
+        beam_ul, beam_lr = get_vert_beam_rect(beam_x, beam_y)
+        if(x > beam_ul[0]-10 && x < beam_lr[0]+10 && y > beam_ul[1]-10 && y < beam_lr[1]+10) then
+          send_beam_update false, :v, beam_x, beam_y
+          send_event "vbeam #{beam_x}.#{beam_y} break"
+          sleep 0.5
+          send_beam_update true, :v, beam_x, beam_y
+          send_event "vbeam #{beam_x}.#{beam_y} make"
+          break
+        end
+      end
+    end
+    for beam_x in (0..@nbr_beams-1) do
+      for beam_y in (0..@nbr_beams) do
+        beam_ul, beam_lr = get_horiz_beam_rect(beam_x, beam_y)
+        if(x > beam_ul[0]-10 && x < beam_lr[0]+10 && y > beam_ul[1]-10 && y < beam_lr[1]+10) then
+          send_beam_update false, :h, beam_x, beam_y
+          send_event "hbeam #{beam_x}.#{beam_y} break"
+          sleep 0.5
+          send_beam_update true, :h, beam_x, beam_y
+          send_event "hbeam #{beam_x}.#{beam_y} make"
+          break
+        end
+      end
+    end
+  end
+  
+  def send_beam_update(make, hv, x, y)
+    @udp.send "beam #{make ? "m" : "b"} #{hv} #{x} #{y}", 0, @udp_addr, @udp_port
+  end
+  
+  def send_event(msg)
+    @udp.send "event console-beam \"#{msg}\"", 0, @udp_addr, @udp_port
   end
 end
 
@@ -227,9 +287,29 @@ net_reader.event_callback = lambda { |from, msg|
 net_reader.loc_callback = lambda { |x, y|
   maze_ui.player_location = [x, y]
 }
+
+@event_queue = Rubygame::EventQueue.new
+@event_queue.enable_new_style_events
+
 # main event loop, net_reader gets data and makes callbacks,
 # then the display modules each update their displays
 while true do
+  @event_queue.each do |e|
+    next if !e.is_a? Rubygame::Events::MousePressed
+    x = e.pos[0]
+    y = e.pos[1]
+    if(  x > maze_ui.base_x && x < maze_ui.base_x + maze_ui.width \
+      && y > maze_ui.base_y && y < maze_ui.base_y + maze_ui.height) then
+      maze_ui.click x - maze_ui.base_x, y - maze_ui.base_y
+    elsif(  x > beam_ui.base_x && x < beam_ui.base_x + beam_ui.width \
+         && y > beam_ui.base_y && y < beam_ui.base_y + beam_ui.height) then
+      beam_ui.click x - beam_ui.base_x, y - beam_ui.base_y
+    elsif(  x > event_ui.base_x && x < event_ui.base_x + event_ui.width \
+         && y > event_ui.base_y && y < event_ui.base_y + event_ui.height) then
+      event_ui.click x - event_ui.base_x, y - event_ui.base_y
+    end
+  end
+  
   net_reader.get_data
   beam_ui.draw
   maze_ui.draw

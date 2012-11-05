@@ -92,7 +92,7 @@ class MazeDriver
               @player_loc[0][1] -= 1
             elsif hv == :v && x == @player_loc[0][0] + 1 then
               @player_loc[0][0] += 1
-            elsif hv == :v && y == @player_loc[0][0] then
+            elsif hv == :v && x == @player_loc[0][0] then
               @player_loc[0][0] -= 1
             end
             @log.debug "New location #{@player_loc[0].join " "}, broke #{hv}beam #{x}.#{y}"

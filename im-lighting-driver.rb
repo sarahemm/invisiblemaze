@@ -1,7 +1,8 @@
 #!/usr/bin/ruby
 
 require 'rubygems'
-require 'artnet/io'
+require '../ruby-artnet/lib/artnet/io.rb'
+require '../ruby-artnet/lib/artnet/node.rb'
 require 'socket'
 require 'lib/im-netreader.rb'
 require 'lib/im-log.rb'
@@ -132,8 +133,12 @@ end
 
 class LightingDriver
   attr_accessor :state, :nbr_walls, :vwalls, :hwalls
+  attr_reader   :last_discovery, :last_announce
   
   def initialize(options)
+    @udp = UDPSocket.new
+    @udp_addr = "127.0.0.1"
+    @udp_port = 4444
     @nbr_walls = 4
     @vwalls = Array.new(@nbr_walls+1, Array.new(@nbr_walls, nil) )
     @hwalls = Array.new(@nbr_walls, Array.new(@nbr_walls+1, nil) )
@@ -190,8 +195,10 @@ class LightingDriver
     @hwalls[2][4].lights = gen_wall_lights 2, 1, 128*2+1..128*3-3
     @hwalls[3][4].lights = gen_wall_lights 2, 1, 128*3+1..128*4-3
     # bring up a new artnet connection
-    @artnet = ArtNet::IO.new :network => "10.0.0.0", :netmask => "255.0.0.0"
-    @log        = options[:logger]
+    @artnet = ArtNet::IO.new :network => "2.0.0.0", :netmask => "255.0.0.0"
+    @log = options[:logger]
+    @last_discovery = Time.at 0
+    @last_announce = Time.at 0
     @log.info "iM lighting driver initialized."
   end
   
@@ -219,6 +226,28 @@ class LightingDriver
     @artnet.send_update 1, 3
   end
   
+  def process_events
+    @artnet.process_events
+  end
+  
+  def discover
+    @log.debug "Starting node discovery"
+    @artnet.poll_nodes
+    @last_discovery = Time.new
+  end
+  
+  def announce_nodes
+    @log.debug "Announcing #{@artnet.nodes.length} discovered nodes"
+    nodeinfo = ""
+    @artnet.nodes.each do |node|
+      node.swin.each do |port|
+        nodeinfo += " #{node.uni}.#{node.subuni}.#{port}"
+      end
+    end
+    send_update "lightnodes #{@artnet.nodes.length}#{nodeinfo}"
+    @last_announce = Time.new
+  end
+  
   private
   
   def gen_wall_lights(uni, subuni, chan_range)
@@ -228,6 +257,11 @@ class LightingDriver
       #puts "Adding uni #{uni} subuni #{subuni} start chan #{chan}"
     end
     wall
+  end
+  
+  def send_update(packet)
+    puts "sending [#{packet}]"
+    @udp.send packet, 0, @udp_addr, @udp_port
   end
 end
 
@@ -247,6 +281,9 @@ net_reader.state_callback = lambda {|old_state, new_state|
 
 while(true) do
   net_reader.get_data
+  light.process_events
+  light.discover if Time.new - light.last_discovery > 30  # run a discovery every 30s
+  light.announce_nodes if Time.new - light.last_announce > 30 && Time.new - light.last_discovery > 2
   light.update_all_universes
   #puts light.state
   case light.state
@@ -264,5 +301,5 @@ while(true) do
         end
       end
   end
-  sleep 0.5
+  sleep 0.25
 end

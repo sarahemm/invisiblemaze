@@ -234,6 +234,49 @@ class MazeDisplay < GridDisplay
   end
 end
 
+# LightingDisplay shows the status of the connected lighting universes
+class LightingDisplay < Display
+  def initialize(options)
+    super
+    @nbr_unis = options[:nbr_unis] || 0
+    @unis_seen = Array.new
+  end
+  
+  def draw
+    # set up a temporary surface to draw to, before blitting to the screen
+    surface = Surface.new([@width, @height]);
+    #surface.fill [50, 50, 50]
+    # draw our indicators for each universe
+    dia = @width/10
+    y_spacing = @height/(@nbr_unis+1)
+    addr_uni = 0
+    (1..@nbr_unis).each do |uni|
+      x = @width/2
+      y = y_spacing/2+uni*y_spacing
+      colour = [255, 0, 0]
+      addr_subuni =  (uni-1) / 4
+      addr_port   = ((uni-1) % 4) + 1
+      colour = [0, 255, 0] if @unis_seen.include? [addr_uni, addr_subuni, addr_port]
+      surface.draw_circle_s [x, y, 0], dia, colour
+      text_uni = format "%02d", uni.to_s
+      draw_text :text => text_uni, :x => x-@body_font.height/2, :y => y-@body_font.height/2, :surface => surface, :font => @body_font
+    end
+    # draw the title
+    text_surface = @title_font.render "Lighting", true, [200, 200, 225]
+    text_surface.blit surface, [@width/2-text_surface.width/2, 0]
+    # blit the surface into the requested place on the screen
+    surface.blit @screen, [@base_x, @base_y], [0, 0, @width, @height]
+  end
+  
+  def discovered_nodes=(node_list)
+    @unis_seen.clear
+    node_list.each do |uni_info|
+      addr_uni, addr_subuni, addr_port = uni_info.split "."
+      @unis_seen << [addr_uni.to_i, addr_subuni.to_i, addr_port.to_i]
+    end
+  end
+end
+
 # EventDisplay shows a scrolling ticker of events from other drivers
 class EventDisplay < Display
   def initialize(options)
@@ -267,9 +310,10 @@ TTF.setup
 screen.fill :black
 
 # set up each display module
-maze_ui = MazeDisplay.new   :screen => screen, :width => 500,  :height => 500, :base_x => 0,   :base_y => 15, :nbr_beams => grid_size
-beam_ui = BeamDisplay.new   :screen => screen, :width => 500,  :height => 500, :base_x => 525, :base_y => 15, :nbr_beams => grid_size
-event_ui = EventDisplay.new :screen => screen, :width => 1000, :height => 200, :base_x => 12,  :base_y => 500
+maze_ui     = MazeDisplay.new     :screen => screen, :width => 475,  :height => 475, :base_x => 0,   :base_y => 15, :nbr_beams => grid_size
+beam_ui     = BeamDisplay.new     :screen => screen, :width => 475,  :height => 475, :base_x => 550, :base_y => 15, :nbr_beams => grid_size
+lighting_ui = LightingDisplay.new :screen => screen, :width => 125,  :height => 475, :base_x => 450, :base_y => 15, :nbr_unis  => 12
+event_ui    = EventDisplay.new    :screen => screen, :width => 1000, :height => 200, :base_x => 12,  :base_y => 500
 
 # set up the network reader and all the callbacks for things it can talk to
 net_reader = NetReader.new :port => 4445
@@ -286,6 +330,9 @@ net_reader.event_callback = lambda { |from, msg|
 }
 net_reader.loc_callback = lambda { |x, y|
   maze_ui.player_location = [x, y]
+}
+net_reader.lightnodes_callback = lambda { |nodes, node_info|
+  lighting_ui.discovered_nodes = node_info
 }
 
 @event_queue = Rubygame::EventQueue.new
@@ -313,6 +360,7 @@ while true do
   net_reader.get_data
   beam_ui.draw
   maze_ui.draw
+  lighting_ui.draw
   event_ui.draw
   screen.update
   sleep CYCLE_DELAY

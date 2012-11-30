@@ -5,7 +5,7 @@
 
 require 'rubygems'
 require 'socket'
-require 'lib/im-log.rb'
+require './lib/im-log.rb'
 
 $0 = "iM: Packet Reflector"
 log = Logging.new 'PKT'

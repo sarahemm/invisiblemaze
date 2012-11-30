@@ -3,7 +3,7 @@
 require 'rubygems'
 require 'socket'
 require 'serialport'
-require 'lib/im-log.rb'
+require './lib/im-log.rb'
 
 class BeamDriver
   def initialize(options = Hash.new)

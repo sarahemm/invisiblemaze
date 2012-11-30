@@ -1,9 +1,9 @@
 #!/usr/bin/ruby
 
 require 'socket'
-require 'lib/im-maze.rb'
-require 'lib/im-netreader.rb'
-require 'lib/im-log.rb'
+require './lib/im-maze.rb'
+require './lib/im-netreader.rb'
+require './lib/im-log.rb'
 
 class MazeDriver
   def initialize(options)

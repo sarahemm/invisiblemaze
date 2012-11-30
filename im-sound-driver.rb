@@ -3,8 +3,8 @@
 require 'rubygems'
 require 'rubygame'
 require 'socket'
-require 'lib/im-log.rb'
-require 'lib/im-netreader.rb'
+require './lib/im-log.rb'
+require './lib/im-netreader.rb'
 
 include Rubygame
 

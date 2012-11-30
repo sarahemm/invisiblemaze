@@ -1,10 +1,11 @@
 #!/usr/bin/ruby
 
 require 'rubygems'
-require 'lib/im-log.rb'
+require './lib/im-log.rb'
 
 $0 = 'iM: Controller'
 log = Logging.new 'CTL'
+ENV['SDL_VIDEODRIVER'] = 'dummy'
 
 def launch_module(mod)
   @running_mods[mod] = Process.fork do

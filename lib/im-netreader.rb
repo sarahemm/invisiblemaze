@@ -5,7 +5,6 @@ class NetReader
   def initialize(options = Hash.new)
     @port = options[:port] || 4444
     @udp = UDPSocket.new
-    @udp.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEPORT, true)
     @udp.bind("127.0.0.1", @port)
     @beam_callback  = lambda { }
     @maze_callback  = lambda { }

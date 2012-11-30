@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'socket'
 require 'rubygame'
+require 'getoptlong'
 require 'lib/im-maze.rb'
 require 'lib/im-netreader.rb'
 include Rubygame
@@ -302,18 +303,34 @@ class EventDisplay < Display
   end
 end
 
+# MAIN #
+width = 1024
+height = 768
+
+opts = GetoptLong.new(
+  [ '--size', '-s', GetoptLong::REQUIRED_ARGUMENT ]
+)
+opts.each do |opt, arg|
+  case opt
+    when '--size'
+      (width, height) = arg.split("x")
+      width  = width.to_i
+      height = height.to_i
+  end
+end
+
 CYCLE_DELAY=0.5
 grid_size = 4
-screen = Rubygame::Screen.open [1024, 768]
+screen = Rubygame::Screen.open [width, height]
 Rubygame::Surface.autoload_dirs << "images"
 TTF.setup
 screen.fill :black
 
 # set up each display module
-maze_ui     = MazeDisplay.new     :screen => screen, :width => 475,  :height => 475, :base_x => 0,   :base_y => 15, :nbr_beams => grid_size
-beam_ui     = BeamDisplay.new     :screen => screen, :width => 475,  :height => 475, :base_x => 550, :base_y => 15, :nbr_beams => grid_size
-lighting_ui = LightingDisplay.new :screen => screen, :width => 125,  :height => 475, :base_x => 450, :base_y => 15, :nbr_unis  => 12
-event_ui    = EventDisplay.new    :screen => screen, :width => 1000, :height => 200, :base_x => 12,  :base_y => 500
+maze_ui     = MazeDisplay.new     :screen => screen, :width => screen.width*0.463, :height => screen.height*0.618, :base_x => screen.width*0.000, :base_y => screen.height*0.014, :nbr_beams => grid_size
+beam_ui     = BeamDisplay.new     :screen => screen, :width => screen.width*0.463, :height => screen.height*0.618, :base_x => screen.width*0.537, :base_y => screen.height*0.014, :nbr_beams => grid_size
+lighting_ui = LightingDisplay.new :screen => screen, :width => screen.width*0.122, :height => screen.height*0.618, :base_x => screen.width*0.439, :base_y => screen.height*0.014, :nbr_unis  => 12
+event_ui    = EventDisplay.new    :screen => screen, :width => screen.width*0.976, :height => screen.height*0.260, :base_x => screen.width*0.012, :base_y => screen.height*0.488
 
 # set up the network reader and all the callbacks for things it can talk to
 net_reader = NetReader.new :port => 4445

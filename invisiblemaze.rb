@@ -48,6 +48,9 @@ trap "SIGINT", proc {
 }
 
 modules = ['packet-reflector', 'sound-driver', 'lighting-driver', 'beam-driver', 'maze-driver']
+if(File.exist?('/sys/class/leds/led0/brightness')) then
+  modules.push 'heartbeat'
+end
 @running_mods = Hash.new
 modules.each do |mod|
 	log.info "Launching #{mod}..."

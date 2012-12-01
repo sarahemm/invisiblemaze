@@ -31,14 +31,17 @@ trap "SIGINT", proc {
   @running_mods.each do |mod, pid|
     log.info "Shutting down #{mod} (pid #{pid})..."
     File.unlink "run/im-#{mod.downcase}.pid"
+    next if !process_running?(pid)
     Process.kill "INT", pid.to_i
+    Process.wait(-1, Process::WNOHANG)
     tries=0
     while(process_running?(pid)) do
-      sleep 0.25
+      sleep 0.5
       tries += 1
       if(tries == 10) then
         log.info "#{mod} did not exit, killing."
         Process.kill "KILL", pid.to_i
+    	Process.wait(-1, Process::WNOHANG)
       end
     end
   end
